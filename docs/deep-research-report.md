@@ -1,7 +1,7 @@
 # Advanced Pharmacy Software Specification (India – Single Store)
 
 ## Executive Summary  
-This document defines a comprehensive, production‐grade specification for an advanced pharmacy management system, tailored to Indian regulations (Drug & Cosmetics Act, Schedule H/H1, GST law, NDPS, etc.). It covers all key modules – Billing/POS, Inventory, Customers/CRM, Purchases, Returns/Credit Notes, Prescriptions, Schedule H1 & Controlled Drugs registers, Reports, Accounting/GST, User/Role management, Notifications, Integrations, Backup/Restore, Audit/Security, Offline sync and Hardware integration.  Each module’s purpose, workflows, screens, validations, business rules, data model, APIs, UI notes, error handling, and test cases are described.  The spec also includes a normalized database schema and ER diagram (Mermaid), sequence diagrams for core flows (sale, return, purchase, sync), GST invoicing/credit-note rules, H1 register format, expiry/FEFO logic, batch/barcode tracking, concurrency strategy, deployment options (local/cloud), performance targets (e.g. 1,000+ SKUs, 10,000+ bills/day), security controls (auth, encryption, audit logs), and a rollout roadmap with time/cost (₹250/hr). All designs assume an agnostic UI framework and database engine. The spec is evidence-based with citations from official Indian sources (GST Council, CDSCO, NDPS rules, etc.) and industry examples.
+This document defines a comprehensive, production‐grade specification for an advanced pharmacy management system, tailored to Indian regulations (Drug & Cosmetics Act, Schedule H/H1, GST law, NDPS, etc.). It covers all key modules – Billing/POS, Inventory, Customers/CRM, Purchases, Returns/Credit Notes, Prescriptions, Schedule H1 & Controlled Drugs registers, Reports, Accounting/GST, User/Role management, Notifications, Integrations, Backup/Restore, Audit/Security, Offline sync and Hardware integration. Each module’s purpose, workflows, screens, validations, business rules, data model, APIs, UI notes, error handling, and test cases are described. The spec also includes a normalized database schema and ER diagram (Mermaid), sequence diagrams for core flows (sale, return, purchase, sync), GST invoicing/credit-note rules, H1 register format, expiry/FEFO logic, batch/barcode tracking, concurrency strategy, deployment options, performance targets for v1 scale (e.g. 1,000+ SKUs and up to ~1,000 invoices/day), security controls (auth, encryption, audit logs), and a rollout roadmap with time/cost (₹250/hr). All designs assume an agnostic UI framework and database engine. The spec is evidence-based with citations from official Indian sources (GST Council, CDSCO, NDPS rules, etc.) and industry examples.
 
 ## Target Users and Personas  
 - **Pharmacy Owner/Manager:** Typically a licensed pharmacist or proprietor concerned with overall compliance, profitability, and reporting. Needs executive dashboards (sales, tax reports, stock health) and full admin access. (e.g. *“Raj, 45, owns a busy urban pharmacy, needs clear insights on stock levels and tax liability.*)  
@@ -11,6 +11,19 @@ This document defines a comprehensive, production‐grade specification for an a
 - **Compliance/Auditor:** Inspects records (GST invoices, H1 register, NDPS logs, audit trail). Needs read‐only access to compliance modules and reports.  
 - **Suppliers/Doctors (Contacts):** Managed via CRM module for ordering and communication; not direct users but entities in system (e.g. storing doctor info for prescriptions, or supplier details for purchases).  
 - **Customers/Patients:** Data captured at point of sale. May receive notifications (e.g. prescription refill reminders) or loyalty points in CRM, but not direct system users.
+
+## Implementation Decisions (Locked for Build)
+
+To keep implementation unambiguous, the following decisions are locked:
+
+1. **Architecture posture:** Multi-terminal-ready from the beginning.
+2. **Returns naming convention:** Database tables use `returns` and `return_items`; customer-facing/business wording uses Credit Note / Credit Note Items (`credit_note_items` label in reports/exports).
+3. **NDPS scope:** Include Forms 3D, 3E, and 3H.
+4. **Notifications scope:** Email-only for current implementation scope (no SMS integration in current roadmap).
+5. **Performance target (v1):** ~1,000 SKUs and up to ~1,000 invoices/day.
+6. **RBAC scope:** Full 5-role model from initial release.
+7. **Deployment target (first release):** Windows desktop only.
+8. **Planning note:** Timeline estimates are indicative and may improve with AI-assisted development.
 
 ## Modules
 
@@ -66,7 +79,7 @@ Streamlined POS with barcode focus. Auto-complete product search (type or scan).
 - **Batch Tracking:** When goods are received (purchase), a new batch entry is created with batch number, mfg/exp dates, quantity and cost. The software automatically increases inventory. Each batch record is used for FEFO sales.  
 - **Stock Adjustments:** On sale, decrement the earliest‐expiry batch (FEFO). If one batch runs out, move to next. The system enforces “first expiry first out”原则【14†L55-L59】. On returns or cancelled sales, batch stock is incremented back (to the same batch used).  
 - **Expiry Management:** Mark batches expired when past date; do not allow selling expired stock. Maintain “quarantine” inventory. Alert on screen and via notifications if any stock is nearing expiry (e.g. <30 days) or below reorder level.  
-- **Low-Stock Alerts:** When any SKU falls below its reorder level, generate an alert. Support notification (email/SMS) to manager about low stock【30†L399-L406】.  
+- **Low-Stock Alerts:** When any SKU falls below its reorder level, generate an alert. Support email notification to manager about low stock【30†L399-L406】.  
 - **Stock Transfers:** (Optional for a single store) record internal adjustments or stock damage/loss.  
 
 **Business Rules:**  
@@ -108,7 +121,7 @@ Inventory dashboard showing critical items (low stock, expiring soon) with color
 **Features:**  
 - **Customer Profile:** Store name, contact (phone/email), address, optional DOB. Mark category (senior citizen, etc.) for potential discounts. For recurring customers (e.g. chronic patients), auto-fill details during billing.  
 - **Patient Lookup:** During billing, easily search by name/phone. Assign invoice to customer (for credit or record-keeping). If selling Schedule H/H1 drug, link the sale to the patient (store patient’s name or reg no).  
-- **Loyalty/History:** Track purchase history per customer. Optionally award points or generate prescription refill reminders via SMS/email (integrates with Notifications).  
+- **Loyalty/History:** Track purchase history per customer. Optionally award points or generate prescription refill reminders via email (integrates with Notifications).  
 - **Validations:** Ensure phone and email formats are valid. Avoid duplicate customers by prompting if name and number match existing entry.  
 
 **Data Model:**  
@@ -145,7 +158,7 @@ Customer page with list, search, and edit functions. “Add Customer” screen w
 - `POST /api/contacts`: add new.  
 
 **UI Notes:**  
-A unified “Contacts” page with tabs or filters by type. Fields specific to type (e.g. supplier: bank details; doctor: reg. no). Optional CRM: send SMS/email from contact record.  
+A unified “Contacts” page with tabs or filters by type. Fields specific to type (e.g. supplier: bank details; doctor: reg. no). Optional CRM: send email from contact record.  
 
 **Test Case:**  
 - Add a new doctor, then sell an H1 drug and ensure doctor can be selected and auto-fill H1 fields.  
@@ -403,17 +416,19 @@ Admin dashboard for managing users and assigning roles. Each module’s menus sh
 **Purpose:** Alert staff or customers automatically based on events.  
 
 **Triggers:**  
-- **Stock Alerts:** Low-stock or expiry warnings (email/SMS to owner/pharmacist).  
+- **Stock Alerts:** Low-stock or expiry warnings (email to owner/pharmacist).  
 - **Payment Reminders:** If offering credit to regular customers, send due reminders.  
-- **Promotional:** (Optional) Automated SMS/Email for sales or loyalty offers.  
+- **Promotional:** (Optional) Automated email campaigns for sales or loyalty offers.  
 - **Prescription Reminders:** If integrated with patient birthdays or refill dates, send polite reminders.  
+
+**Implementation Decision:** For current roadmap execution, notifications are limited to **email-only** triggers (SMTP). SMS is intentionally out of scope for now.
 
 **Implementation:**  
 Use an external service or SMTP/HTTP API. Configurable settings for which events send notifications.  
 
 **Test Cases:**  
 - Simulate stock falling below threshold: verify email to manager.  
-- Schedule an expiration notice and check SMS delivered.  
+- Schedule an expiration notice and check email delivery.  
 
 ### Integrations  
 **Purpose:** Connect with external systems to streamline operations.  
@@ -477,9 +492,11 @@ Admin screen for backup history, with one-click “Backup Now” and “Restore�
 
 ### Performance & Load  
 **Targets:**  
-- Support ~1,000+ unique SKUs (medicines) and ~10,000+ transactions/day without lag.  
+- Support ~1,000+ unique SKUs (medicines) and up to ~1,000 transactions/day without lag for v1.  
 - Concurrency: Allow multiple workstations (e.g. cashier and stock manager simultaneously) – the open-source PharmaSpot supports multi-PC on a network【30†L357-L365】.  
 - Response time: <200ms for common queries (product lookup, sale commit).  
+
+**Implementation Decision (v1):** Capacity target for initial release is **~1,000 SKUs and up to ~1,000 invoices/day**, while preserving multi-workstation-safe architecture.
 
 **Strategies:**  
 - **Efficient DB Design:** Index on frequently searched fields (product name, barcode). Normalize to avoid redundant data.  
@@ -508,7 +525,7 @@ Could use libraries (e.g. CouchDB replication, or custom sync via REST APIs). Lo
 
 ### Hardware Specifications  
 - **Server (if local):** PC with reliable power backup, SSD drive, sufficient RAM (8–16GB). If cloud: AWS/GCP instance (2+ vCPUs, 8GB RAM).  
-- **Workstations:** PCs/tablets with barcode scanner and network connectivity to server. Capable of running chosen OS/app (Windows/Linux/macOS).  
+- **Workstations:** Windows PCs with barcode scanner and network connectivity to server (Windows-first release target).  
 - **Scanner:** USB/Bluetooth barcode scanner (supports EAN-13, GS1); e.g. Honeywell or Zebra models.  
 - **Printer:** 80mm thermal receipt printer (auto-cutter) – Star Micronics, Epson, or generic. Ethernet or USB interface.  
 - **UPS:** To protect hardware and allow safe shutdown in power failures.  
@@ -527,7 +544,7 @@ Could use libraries (e.g. CouchDB replication, or custom sync via REST APIs). Lo
 - **PURCHASE:** (id, number, date, supplier_id FK, user_id FK, total_value, cgst_total, sgst_total, igst_total).  
 - **PURCHASE_ITEM:** (id, purchase_id FK, product_id FK, batch_no, mfg_date, exp_date, qty, cost_price, cgst_amt, sgst_amt, igst_amt).  
 - **RETURN (Credit Note):** (id, number, date, original_invoice_id FK, user_id FK, total_value, cgst_total, sgst_total, igst_total).  
-- **RETURN_ITEM:** (id, return_id FK, invoice_item_id FK, qty, refund_amount, cgst_amt, sgst_amt, igst_amt).  
+- **RETURN_ITEM (Credit Note Item label in reports):** (id, return_id FK, invoice_item_id FK, qty, refund_amount, cgst_amt, sgst_amt, igst_amt).  
 - **USER:** (id, username, hash_pwd, name, role_id FK).  
 - **ROLE:** (id, name).  
 - **PERMISSION:** (id, name).  
@@ -651,7 +668,7 @@ sequenceDiagram
 | **Procurement & Returns**    | Purchases, Stock Receive, Returns/Credit-Notes, Supplier/Customer ledger    |     80 hrs | ₹20,000          |
 | **Compliance Modules**       | Schedule H1 register, NDPS logs, Prescription upload                       |     40 hrs | ₹10,000          |
 | **Accounting & Taxation**    | GST calculations, E-Invoice support, GST/Accounting reports, Roles          |     60 hrs | ₹15,000          |
-| **UI/UX & Notifications**    | User roles UI, error handling screens, alerts (SMS/Email integration)       |     30 hrs | ₹7,500           |
+| **UI/UX & Notifications**    | User roles UI, error handling screens, alerts (email integration)            |     30 hrs | ₹7,500           |
 | **Audit & Security**         | Audit logs, encryption, secure auth, permission matrix                     |     40 hrs | ₹10,000          |
 | **Offline Sync**             | Offline data sync engine, conflict handling                                |     50 hrs | ₹12,500          |
 | **Hardware Integration**     | Barcode, printer drivers, deployment on tablets/PC                         |     20 hrs | ₹5,000           |
@@ -663,4 +680,3 @@ sequenceDiagram
 
 ## References  
 Official Indian regulations and best practices have been used throughout, for example: GST invoice rules【24†L162-L170】【24†L178-L185】 and credit-note rules【26†L39-L48】【26†L49-L58】, Schedule H1 legal register requirements【8†L1-L7】【6†L311-L319】, FEFO inventory principle【14†L55-L59】, etc. The spec also references open-source pharmacy POS features【30†L393-L400】【30†L401-L406】 and Android architecture guidelines【37†L59-L64】 for offline design, ensuring the system meets regulatory compliance and robust user expectations.  All modules, tables, and workflows above should be treated as a blueprint; further detail (UI mockups, API schemas, DB indexes) will be refined during design sprints. This document serves as a deep technical foundation for development and compliance audit.  
-

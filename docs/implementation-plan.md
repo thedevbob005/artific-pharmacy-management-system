@@ -6,6 +6,21 @@
 
 This plan translates the full 22-page specification ("Advanced Pharmacy Software Specification – India, Single Store") into a 6-phase, 8-week rollout covering 15+ modules and 20+ database tables.
 
+## Execution Decisions (Locked)
+
+The following decisions are locked for implementation and should be treated as the source of truth for future planning and build work:
+
+1. **Architecture posture:** Multi-terminal-ready from day one (sync hooks and conflict-safe IDs planned early).
+2. **Returns naming convention:**
+   - **Database tables:** `returns`, `return_items`
+   - **Business/UI term:** Credit Note / Credit Note Items (`credit_note_items` as report/export label)
+3. **NDPS scope:** Include Forms **3D, 3E, and 3H**.
+4. **Notifications scope:** Email-only (`mailer` SMTP) for current planned scope (no SMS integration).
+5. **Performance target (v1):** Support ~1,000 SKUs and up to ~1,000 invoices/day.
+6. **RBAC scope:** Keep full 5-role matrix from the beginning (product is intended for sale to pharmacies).
+7. **Deployment target (first release):** Windows desktop only.
+8. **Timeline note:** Existing effort estimate is indicative and can be compressed with AI-assisted development.
+
 ---
 
 ## Technology Stack
@@ -118,7 +133,7 @@ All 20+ tables from the specification, implemented as Drift table classes.
 | **Procurement** | `suppliers`, `purchases`, `purchase_items` |
 | **Returns** | `returns` (credit notes), `return_items` |
 | **Customers** | `customers`, `contacts` |
-| **Compliance** | `prescriptions`, `h1_register`, `ndps_3d`, `ndps_3e` |
+| **Compliance** | `prescriptions`, `h1_register`, `ndps_3d`, `ndps_3e`, `ndps_3h` |
 | **Auth** | `users`, `roles`, `permissions`, `role_permissions` |
 | **System** | `audit_logs`, `inventory_adjustments`, `notifications`, `pharmacy_settings` |
 
@@ -162,12 +177,14 @@ The minimum viable product — a pharmacy can use this for daily billing.
 - **[NEW]** `core/theme/` — Fluent design tokens (accent color, typography, spacing)
 - **[NEW]** `core/router/` — Route definitions with auth guard middleware
 - **[NEW]** `core/di/` — `get_it` + `injectable` dependency injection setup
+- **[NEW]** Multi-terminal-ready technical baseline: terminal identifier strategy, conflict-safe invoice identity strategy, and sync boundary interfaces (implementation can be phased)
 
 ### 1B — Database Layer
 - **[NEW]** `data/database/app_database.dart` — Full Drift database with all 20+ tables
 - **[NEW]** `data/database/tables/` — All Drift table class definitions
 - **[NEW]** `data/database/daos/` — DAOs: `ProductDao`, `InvoiceDao`, `BatchDao`, `UserDao`, etc.
 - **[NEW]** Seed logic — default roles (Admin, Pharmacist, Cashier, Accountant, Auditor), default admin user
+- **[NEW]** Returns schema standardization: table names remain `returns` + `return_items`, while UI/report terminology uses “Credit Note” / “Credit Note Items”
 
 ### 1C — Authentication
 - **[NEW]** `features/auth/` — Login page with Fluent UI, `AuthBloc`, bcrypt password hashing
@@ -218,6 +235,7 @@ The minimum viable product — a pharmacy can use this for daily billing.
 - **[NEW]** `features/compliance/ndps/` — NDPS registers
   - Form 3D: daily stock account (opening/received/dispensed/closing)
   - Form 3E: patient-wise dispensation log
+  - Form 3H: hospital/sub-storage account support where applicable
   - Auto-entry on narcotic/psychotropic sale
   - 2-year retention per NDPS rules
 - **[NEW]** `features/compliance/prescriptions/` — Prescription management
@@ -251,7 +269,7 @@ The minimum viable product — a pharmacy can use this for daily billing.
 
 ## Phase 6: Notifications, Hardware & Polish (Week 8)
 
-- **[NEW]** SMTP email notifications (`mailer` package) — configurable server settings, triggers for low stock and expiry alerts
+- **[NEW]** SMTP email notifications (`mailer` package) — configurable server settings, triggers for low stock and expiry alerts (**email-only scope; SMS out of scope for current plan**)
 - **[NEW]** Hardware integration:
   - Thermal printer via `unified_esc_pos_printer` (USB/Network/BT, ESC/POS commands)
   - Barcode scanner via HID keyboard input (`RawKeyboardListener`)
@@ -260,6 +278,7 @@ The minimum viable product — a pharmacy can use this for daily billing.
 - **[NEW]** Keyboard shortcuts (F-keys for POS actions: F2=New Sale, F4=Hold, F8=Payment, etc.)
 - **[NEW]** `msix` packaging for Windows installer
 - **[NEW]** Performance optimization — Drift indexes, isolate-based report generation
+- **[NEW]** Target load validation for v1 profile (~1,000 SKUs, up to ~1,000 invoices/day)
 
 ---
 
