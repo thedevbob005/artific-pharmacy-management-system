@@ -3,9 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/permissions.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../../contacts/pages/contacts_page.dart';
+import '../../customers/pages/customers_page.dart';
 import '../../dashboard/pages/dashboard_page.dart';
 import '../../inventory/pages/inventory_page.dart';
 import '../../pos/pages/pos_page.dart';
+import '../../purchases/pages/purchases_page.dart';
+import '../../returns/pages/returns_page.dart';
 
 class AppShellPage extends StatelessWidget {
   const AppShellPage({super.key});
@@ -33,6 +37,40 @@ class AppShellPage extends StatelessWidget {
               icon: const Icon(FluentIcons.product_release),
               title: const Text('Inventory'),
               body: const InventoryPage(),
+            ),
+          );
+        }
+        if (_canSee(access, 'Purchases')) {
+          entries.add(
+            PaneItem(
+              icon: const Icon(FluentIcons.receipt_forward),
+              title: const Text('Purchases'),
+              body: const PurchasesPage(),
+            ),
+          );
+          entries.add(
+            PaneItem(
+              icon: const Icon(FluentIcons.contact_list),
+              title: const Text('Contacts'),
+              body: const ContactsPage(),
+            ),
+          );
+        }
+        if (_canSee(access, 'Returns')) {
+          entries.add(
+            PaneItem(
+              icon: const Icon(FluentIcons.return_to_session),
+              title: const Text('Returns'),
+              body: const ReturnsPage(),
+            ),
+          );
+        }
+        if (_canSee(access, 'Customers')) {
+          entries.add(
+            PaneItem(
+              icon: const Icon(FluentIcons.people),
+              title: const Text('Customers'),
+              body: const CustomersPage(),
             ),
           );
         }
