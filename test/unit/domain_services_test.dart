@@ -29,7 +29,7 @@ void main() {
       final result = service.allocate(
         requestedQty: 12,
         now: DateTime(2026, 4, 1),
-        batches: const [
+        batches: [
           BatchStock(batchId: 1, expDate: DateTime(2026, 7, 1), availableQty: 5),
           BatchStock(batchId: 2, expDate: DateTime(2026, 5, 1), availableQty: 10),
         ],

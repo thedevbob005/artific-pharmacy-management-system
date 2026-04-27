@@ -1,6 +1,5 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/permissions.dart';
 import '../../auth/bloc/auth_bloc.dart';
@@ -39,27 +38,8 @@ class AppShellPage extends StatelessWidget {
         }
 
         return NavigationView(
-          appBar: NavigationAppBar(
-            title: () => Text('APMS — ${role.name.toUpperCase()}'),
-            actions: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(FluentIcons.clear_night),
-                  onPressed: () => context.read<AuthBloc>().add(const AuthThemeToggled()),
-                ),
-                IconButton(
-                  icon: const Icon(FluentIcons.sign_out),
-                  onPressed: () {
-                    context.read<AuthBloc>().add(const AuthLoggedOut());
-                    context.go('/login');
-                  },
-                ),
-              ],
-            ),
-          ),
           pane: NavigationPane(
             selected: 0,
-            displayMode: PaneDisplayMode.open,
             items: [
               PaneItem(
                 icon: const Icon(FluentIcons.view_dashboard),
