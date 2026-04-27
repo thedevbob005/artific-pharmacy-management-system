@@ -1,0 +1,6 @@
+# Generated Drift output tends to conflict frequently during rebases/merges.
+# Keep diffs compact in GitHub and favor straightforward regeneration.
+lib/data/database/app_database.g.dart linguist-generated=true
+
+# Lockfile often receives adjacent dependency bumps from different branches.
+pubspec.lock merge=union
