@@ -93,10 +93,22 @@ void main() {
   );
 
   test('purchases bloc saves invoice and returns saved message', () async {
+    await database.contactDao.createContact(
+      ContactsCompanion.insert(
+        type: 'supplier',
+        name: 'Om Pharma',
+        phone: '7000000000',
+      ),
+      actor: 'admin',
+    );
+
     final bloc = PurchasesBloc(database: database);
 
     bloc.add(const PurchasesStarted());
     await Future<void>.delayed(Duration.zero);
+    bloc.add(const PurchaseSupplierQueryChanged('Om'));
+    await Future<void>.delayed(Duration.zero);
+    expect(bloc.state.supplierSuggestions, contains('Om Pharma'));
 
     bloc.add(
       PurchaseLineAdded(
@@ -126,10 +138,31 @@ void main() {
   test(
     'returns bloc validates return window and saves valid credit note',
     () async {
+      await database.purchaseDao.savePurchaseInvoice(
+        supplierName: 'Om Pharma',
+        supplierGstin: '27AAACO1234B1Z5',
+        items: [
+          PurchaseItemInput(
+            productName: 'Paracetamol',
+            batchNumber: 'B1',
+            quantity: 5,
+            purchasePrice: 10,
+            gstRate: 12,
+            expDate: DateTime(2027, 1, 1),
+          ),
+        ],
+        actor: 'admin',
+      );
+
       final bloc = ReturnsBloc(database: database);
 
       bloc.add(const ReturnsStarted());
       await Future<void>.delayed(Duration.zero);
+      expect(bloc.state.availableInvoices, isNotEmpty);
+      final invoiceId = bloc.state.availableInvoices.first.id;
+      bloc.add(ReturnOriginalInvoiceSelected(invoiceId));
+      await Future<void>.delayed(Duration.zero);
+      expect(bloc.state.availableInvoiceItems, isNotEmpty);
 
       bloc.add(
         const ReturnLineAdded(

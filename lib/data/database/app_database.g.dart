@@ -4748,6 +4748,30 @@ class $CreditNotesTable extends CreditNotes
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _taxableAmountMeta = const VerificationMeta(
+    'taxableAmount',
+  );
+  @override
+  late final GeneratedColumn<double> taxableAmount = GeneratedColumn<double>(
+    'taxable_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _gstAmountMeta = const VerificationMeta(
+    'gstAmount',
+  );
+  @override
+  late final GeneratedColumn<double> gstAmount = GeneratedColumn<double>(
+    'gst_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _totalAmountMeta = const VerificationMeta(
     'totalAmount',
   );
@@ -4777,6 +4801,8 @@ class $CreditNotesTable extends CreditNotes
     originalInvoiceNo,
     originalInvoiceDate,
     returnDate,
+    taxableAmount,
+    gstAmount,
     totalAmount,
     createdAt,
   ];
@@ -4825,6 +4851,21 @@ class $CreditNotesTable extends CreditNotes
     } else if (isInserting) {
       context.missing(_returnDateMeta);
     }
+    if (data.containsKey('taxable_amount')) {
+      context.handle(
+        _taxableAmountMeta,
+        taxableAmount.isAcceptableOrUnknown(
+          data['taxable_amount']!,
+          _taxableAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('gst_amount')) {
+      context.handle(
+        _gstAmountMeta,
+        gstAmount.isAcceptableOrUnknown(data['gst_amount']!, _gstAmountMeta),
+      );
+    }
     if (data.containsKey('total_amount')) {
       context.handle(
         _totalAmountMeta,
@@ -4867,6 +4908,14 @@ class $CreditNotesTable extends CreditNotes
         DriftSqlType.dateTime,
         data['${effectivePrefix}return_date'],
       )!,
+      taxableAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}taxable_amount'],
+      )!,
+      gstAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}gst_amount'],
+      )!,
       totalAmount: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}total_amount'],
@@ -4889,6 +4938,8 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
   final String originalInvoiceNo;
   final DateTime originalInvoiceDate;
   final DateTime returnDate;
+  final double taxableAmount;
+  final double gstAmount;
   final double totalAmount;
   final DateTime createdAt;
   const CreditNote({
@@ -4896,6 +4947,8 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
     required this.originalInvoiceNo,
     required this.originalInvoiceDate,
     required this.returnDate,
+    required this.taxableAmount,
+    required this.gstAmount,
     required this.totalAmount,
     required this.createdAt,
   });
@@ -4906,6 +4959,8 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
     map['original_invoice_no'] = Variable<String>(originalInvoiceNo);
     map['original_invoice_date'] = Variable<DateTime>(originalInvoiceDate);
     map['return_date'] = Variable<DateTime>(returnDate);
+    map['taxable_amount'] = Variable<double>(taxableAmount);
+    map['gst_amount'] = Variable<double>(gstAmount);
     map['total_amount'] = Variable<double>(totalAmount);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -4917,6 +4972,8 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
       originalInvoiceNo: Value(originalInvoiceNo),
       originalInvoiceDate: Value(originalInvoiceDate),
       returnDate: Value(returnDate),
+      taxableAmount: Value(taxableAmount),
+      gstAmount: Value(gstAmount),
       totalAmount: Value(totalAmount),
       createdAt: Value(createdAt),
     );
@@ -4934,6 +4991,8 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
         json['originalInvoiceDate'],
       ),
       returnDate: serializer.fromJson<DateTime>(json['returnDate']),
+      taxableAmount: serializer.fromJson<double>(json['taxableAmount']),
+      gstAmount: serializer.fromJson<double>(json['gstAmount']),
       totalAmount: serializer.fromJson<double>(json['totalAmount']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -4946,6 +5005,8 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
       'originalInvoiceNo': serializer.toJson<String>(originalInvoiceNo),
       'originalInvoiceDate': serializer.toJson<DateTime>(originalInvoiceDate),
       'returnDate': serializer.toJson<DateTime>(returnDate),
+      'taxableAmount': serializer.toJson<double>(taxableAmount),
+      'gstAmount': serializer.toJson<double>(gstAmount),
       'totalAmount': serializer.toJson<double>(totalAmount),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -4956,6 +5017,8 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
     String? originalInvoiceNo,
     DateTime? originalInvoiceDate,
     DateTime? returnDate,
+    double? taxableAmount,
+    double? gstAmount,
     double? totalAmount,
     DateTime? createdAt,
   }) => CreditNote(
@@ -4963,6 +5026,8 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
     originalInvoiceNo: originalInvoiceNo ?? this.originalInvoiceNo,
     originalInvoiceDate: originalInvoiceDate ?? this.originalInvoiceDate,
     returnDate: returnDate ?? this.returnDate,
+    taxableAmount: taxableAmount ?? this.taxableAmount,
+    gstAmount: gstAmount ?? this.gstAmount,
     totalAmount: totalAmount ?? this.totalAmount,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -4978,6 +5043,10 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
       returnDate: data.returnDate.present
           ? data.returnDate.value
           : this.returnDate,
+      taxableAmount: data.taxableAmount.present
+          ? data.taxableAmount.value
+          : this.taxableAmount,
+      gstAmount: data.gstAmount.present ? data.gstAmount.value : this.gstAmount,
       totalAmount: data.totalAmount.present
           ? data.totalAmount.value
           : this.totalAmount,
@@ -4992,6 +5061,8 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
           ..write('originalInvoiceNo: $originalInvoiceNo, ')
           ..write('originalInvoiceDate: $originalInvoiceDate, ')
           ..write('returnDate: $returnDate, ')
+          ..write('taxableAmount: $taxableAmount, ')
+          ..write('gstAmount: $gstAmount, ')
           ..write('totalAmount: $totalAmount, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -5004,6 +5075,8 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
     originalInvoiceNo,
     originalInvoiceDate,
     returnDate,
+    taxableAmount,
+    gstAmount,
     totalAmount,
     createdAt,
   );
@@ -5015,6 +5088,8 @@ class CreditNote extends DataClass implements Insertable<CreditNote> {
           other.originalInvoiceNo == this.originalInvoiceNo &&
           other.originalInvoiceDate == this.originalInvoiceDate &&
           other.returnDate == this.returnDate &&
+          other.taxableAmount == this.taxableAmount &&
+          other.gstAmount == this.gstAmount &&
           other.totalAmount == this.totalAmount &&
           other.createdAt == this.createdAt);
 }
@@ -5024,6 +5099,8 @@ class CreditNotesCompanion extends UpdateCompanion<CreditNote> {
   final Value<String> originalInvoiceNo;
   final Value<DateTime> originalInvoiceDate;
   final Value<DateTime> returnDate;
+  final Value<double> taxableAmount;
+  final Value<double> gstAmount;
   final Value<double> totalAmount;
   final Value<DateTime> createdAt;
   const CreditNotesCompanion({
@@ -5031,6 +5108,8 @@ class CreditNotesCompanion extends UpdateCompanion<CreditNote> {
     this.originalInvoiceNo = const Value.absent(),
     this.originalInvoiceDate = const Value.absent(),
     this.returnDate = const Value.absent(),
+    this.taxableAmount = const Value.absent(),
+    this.gstAmount = const Value.absent(),
     this.totalAmount = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
@@ -5039,6 +5118,8 @@ class CreditNotesCompanion extends UpdateCompanion<CreditNote> {
     required String originalInvoiceNo,
     required DateTime originalInvoiceDate,
     required DateTime returnDate,
+    this.taxableAmount = const Value.absent(),
+    this.gstAmount = const Value.absent(),
     required double totalAmount,
     this.createdAt = const Value.absent(),
   }) : originalInvoiceNo = Value(originalInvoiceNo),
@@ -5050,6 +5131,8 @@ class CreditNotesCompanion extends UpdateCompanion<CreditNote> {
     Expression<String>? originalInvoiceNo,
     Expression<DateTime>? originalInvoiceDate,
     Expression<DateTime>? returnDate,
+    Expression<double>? taxableAmount,
+    Expression<double>? gstAmount,
     Expression<double>? totalAmount,
     Expression<DateTime>? createdAt,
   }) {
@@ -5059,6 +5142,8 @@ class CreditNotesCompanion extends UpdateCompanion<CreditNote> {
       if (originalInvoiceDate != null)
         'original_invoice_date': originalInvoiceDate,
       if (returnDate != null) 'return_date': returnDate,
+      if (taxableAmount != null) 'taxable_amount': taxableAmount,
+      if (gstAmount != null) 'gst_amount': gstAmount,
       if (totalAmount != null) 'total_amount': totalAmount,
       if (createdAt != null) 'created_at': createdAt,
     });
@@ -5069,6 +5154,8 @@ class CreditNotesCompanion extends UpdateCompanion<CreditNote> {
     Value<String>? originalInvoiceNo,
     Value<DateTime>? originalInvoiceDate,
     Value<DateTime>? returnDate,
+    Value<double>? taxableAmount,
+    Value<double>? gstAmount,
     Value<double>? totalAmount,
     Value<DateTime>? createdAt,
   }) {
@@ -5077,6 +5164,8 @@ class CreditNotesCompanion extends UpdateCompanion<CreditNote> {
       originalInvoiceNo: originalInvoiceNo ?? this.originalInvoiceNo,
       originalInvoiceDate: originalInvoiceDate ?? this.originalInvoiceDate,
       returnDate: returnDate ?? this.returnDate,
+      taxableAmount: taxableAmount ?? this.taxableAmount,
+      gstAmount: gstAmount ?? this.gstAmount,
       totalAmount: totalAmount ?? this.totalAmount,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -5099,6 +5188,12 @@ class CreditNotesCompanion extends UpdateCompanion<CreditNote> {
     if (returnDate.present) {
       map['return_date'] = Variable<DateTime>(returnDate.value);
     }
+    if (taxableAmount.present) {
+      map['taxable_amount'] = Variable<double>(taxableAmount.value);
+    }
+    if (gstAmount.present) {
+      map['gst_amount'] = Variable<double>(gstAmount.value);
+    }
     if (totalAmount.present) {
       map['total_amount'] = Variable<double>(totalAmount.value);
     }
@@ -5115,6 +5210,8 @@ class CreditNotesCompanion extends UpdateCompanion<CreditNote> {
           ..write('originalInvoiceNo: $originalInvoiceNo, ')
           ..write('originalInvoiceDate: $originalInvoiceDate, ')
           ..write('returnDate: $returnDate, ')
+          ..write('taxableAmount: $taxableAmount, ')
+          ..write('gstAmount: $gstAmount, ')
           ..write('totalAmount: $totalAmount, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -9139,6 +9236,8 @@ typedef $$CreditNotesTableCreateCompanionBuilder =
       required String originalInvoiceNo,
       required DateTime originalInvoiceDate,
       required DateTime returnDate,
+      Value<double> taxableAmount,
+      Value<double> gstAmount,
       required double totalAmount,
       Value<DateTime> createdAt,
     });
@@ -9148,6 +9247,8 @@ typedef $$CreditNotesTableUpdateCompanionBuilder =
       Value<String> originalInvoiceNo,
       Value<DateTime> originalInvoiceDate,
       Value<DateTime> returnDate,
+      Value<double> taxableAmount,
+      Value<double> gstAmount,
       Value<double> totalAmount,
       Value<DateTime> createdAt,
     });
@@ -9206,6 +9307,16 @@ class $$CreditNotesTableFilterComposer
 
   ColumnFilters<DateTime> get returnDate => $composableBuilder(
     column: $table.returnDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get taxableAmount => $composableBuilder(
+    column: $table.taxableAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get gstAmount => $composableBuilder(
+    column: $table.gstAmount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9274,6 +9385,16 @@ class $$CreditNotesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get taxableAmount => $composableBuilder(
+    column: $table.taxableAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get gstAmount => $composableBuilder(
+    column: $table.gstAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get totalAmount => $composableBuilder(
     column: $table.totalAmount,
     builder: (column) => ColumnOrderings(column),
@@ -9311,6 +9432,14 @@ class $$CreditNotesTableAnnotationComposer
     column: $table.returnDate,
     builder: (column) => column,
   );
+
+  GeneratedColumn<double> get taxableAmount => $composableBuilder(
+    column: $table.taxableAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get gstAmount =>
+      $composableBuilder(column: $table.gstAmount, builder: (column) => column);
 
   GeneratedColumn<double> get totalAmount => $composableBuilder(
     column: $table.totalAmount,
@@ -9378,6 +9507,8 @@ class $$CreditNotesTableTableManager
                 Value<String> originalInvoiceNo = const Value.absent(),
                 Value<DateTime> originalInvoiceDate = const Value.absent(),
                 Value<DateTime> returnDate = const Value.absent(),
+                Value<double> taxableAmount = const Value.absent(),
+                Value<double> gstAmount = const Value.absent(),
                 Value<double> totalAmount = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CreditNotesCompanion(
@@ -9385,6 +9516,8 @@ class $$CreditNotesTableTableManager
                 originalInvoiceNo: originalInvoiceNo,
                 originalInvoiceDate: originalInvoiceDate,
                 returnDate: returnDate,
+                taxableAmount: taxableAmount,
+                gstAmount: gstAmount,
                 totalAmount: totalAmount,
                 createdAt: createdAt,
               ),
@@ -9394,6 +9527,8 @@ class $$CreditNotesTableTableManager
                 required String originalInvoiceNo,
                 required DateTime originalInvoiceDate,
                 required DateTime returnDate,
+                Value<double> taxableAmount = const Value.absent(),
+                Value<double> gstAmount = const Value.absent(),
                 required double totalAmount,
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CreditNotesCompanion.insert(
@@ -9401,6 +9536,8 @@ class $$CreditNotesTableTableManager
                 originalInvoiceNo: originalInvoiceNo,
                 originalInvoiceDate: originalInvoiceDate,
                 returnDate: returnDate,
+                taxableAmount: taxableAmount,
+                gstAmount: gstAmount,
                 totalAmount: totalAmount,
                 createdAt: createdAt,
               ),
@@ -9996,6 +10133,8 @@ class PurchaseDaoManager {
 mixin _$ReturnDaoMixin on DatabaseAccessor<AppDatabase> {
   $CreditNotesTable get creditNotes => attachedDatabase.creditNotes;
   $CreditNoteItemsTable get creditNoteItems => attachedDatabase.creditNoteItems;
+  $ProductsTable get products => attachedDatabase.products;
+  $BatchesTable get batches => attachedDatabase.batches;
   ReturnDaoManager get managers => ReturnDaoManager(this);
 }
 
@@ -10009,4 +10148,8 @@ class ReturnDaoManager {
         _db.attachedDatabase,
         _db.creditNoteItems,
       );
+  $$ProductsTableTableManager get products =>
+      $$ProductsTableTableManager(_db.attachedDatabase, _db.products);
+  $$BatchesTableTableManager get batches =>
+      $$BatchesTableTableManager(_db.attachedDatabase, _db.batches);
 }

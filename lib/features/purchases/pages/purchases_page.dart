@@ -67,6 +67,22 @@ class _PurchasesPageState extends State<PurchasesPage> {
                   _PurchaseHeaderCard(
                     supplierController: _supplierController,
                     gstinController: _gstinController,
+                    suggestions: state.supplierSuggestions,
+                    onSupplierChanged: (value) {
+                      context.read<PurchasesBloc>().add(
+                        PurchaseSupplierQueryChanged(value),
+                      );
+                    },
+                    onSuggestionPicked: (value) {
+                      _supplierController.text = value;
+                      _supplierController
+                          .selection = TextSelection.fromPosition(
+                        TextPosition(offset: _supplierController.text.length),
+                      );
+                      context.read<PurchasesBloc>().add(
+                        PurchaseSupplierQueryChanged(value),
+                      );
+                    },
                     onSave: () {
                       context.read<PurchasesBloc>().add(
                         PurchaseInvoiceSaved(
@@ -123,11 +139,17 @@ class _PurchaseHeaderCard extends StatelessWidget {
   const _PurchaseHeaderCard({
     required this.supplierController,
     required this.gstinController,
+    required this.suggestions,
+    required this.onSupplierChanged,
+    required this.onSuggestionPicked,
     required this.onSave,
   });
 
   final TextEditingController supplierController;
   final TextEditingController gstinController;
+  final List<String> suggestions;
+  final ValueChanged<String> onSupplierChanged;
+  final ValueChanged<String> onSuggestionPicked;
   final VoidCallback onSave;
 
   @override
@@ -144,6 +166,7 @@ class _PurchaseHeaderCard extends StatelessWidget {
               child: TextBox(
                 controller: supplierController,
                 placeholder: 'Supplier name',
+                onChanged: onSupplierChanged,
               ),
             ),
             SizedBox(
@@ -157,6 +180,27 @@ class _PurchaseHeaderCard extends StatelessWidget {
               onPressed: onSave,
               child: const Text('Save purchase invoice'),
             ),
+            if (suggestions.isNotEmpty)
+              SizedBox(
+                width: 260,
+                child: ComboBox<String>(
+                  value: null,
+                  placeholder: const Text('Pick supplier'),
+                  items: suggestions
+                      .map(
+                        (suggestion) => ComboBoxItem<String>(
+                          value: suggestion,
+                          child: Text(suggestion),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      onSuggestionPicked(value);
+                    }
+                  },
+                ),
+              ),
           ],
         ),
       ),

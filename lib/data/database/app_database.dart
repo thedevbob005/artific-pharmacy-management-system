@@ -116,6 +116,8 @@ class CreditNotes extends Table {
   TextColumn get originalInvoiceNo => text()();
   DateTimeColumn get originalInvoiceDate => dateTime()();
   DateTimeColumn get returnDate => dateTime()();
+  RealColumn get taxableAmount => real().withDefault(const Constant(0))();
+  RealColumn get gstAmount => real().withDefault(const Constant(0))();
   RealColumn get totalAmount => real()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -161,7 +163,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -177,6 +179,10 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(purchaseInvoiceItems);
         await m.createTable(creditNotes);
         await m.createTable(creditNoteItems);
+      }
+      if (from < 3) {
+        await m.addColumn(creditNotes, creditNotes.taxableAmount);
+        await m.addColumn(creditNotes, creditNotes.gstAmount);
       }
     },
   );
@@ -382,6 +388,31 @@ class ContactDao extends DatabaseAccessor<AppDatabase> with _$ContactDaoMixin {
     );
     return id;
   }
+
+  Future<List<String>> supplierSuggestions(String query) async {
+    final normalized = query.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      final rows =
+          await (select(contacts)
+                ..where((c) => c.type.equals('supplier'))
+                ..orderBy([(c) => OrderingTerm.asc(c.name)])
+                ..limit(8))
+              .get();
+      return rows.map((row) => row.name).toList();
+    }
+
+    final rows =
+        await (select(contacts)
+              ..where(
+                (c) =>
+                    c.type.equals('supplier') &
+                    c.name.lower().like('%$normalized%'),
+              )
+              ..orderBy([(c) => OrderingTerm.asc(c.name)])
+              ..limit(8))
+            .get();
+    return rows.map((row) => row.name).toList();
+  }
 }
 
 class PurchaseItemInput {
@@ -408,6 +439,19 @@ class PurchaseItemInput {
 class PurchaseDao extends DatabaseAccessor<AppDatabase>
     with _$PurchaseDaoMixin {
   PurchaseDao(super.db);
+
+  Future<List<PurchaseInvoice>> getInvoices() {
+    return (select(
+      purchaseInvoices,
+    )..orderBy([(i) => OrderingTerm.desc(i.createdAt)])).get();
+  }
+
+  Future<List<PurchaseInvoiceItem>> getInvoiceItems(int invoiceId) {
+    return (select(purchaseInvoiceItems)
+          ..where((i) => i.purchaseInvoiceId.equals(invoiceId))
+          ..orderBy([(i) => OrderingTerm.asc(i.id)]))
+        .get();
+  }
 
   Future<int> savePurchaseInvoice({
     required String supplierName,
@@ -511,7 +555,7 @@ class ReturnItemInput {
   final double taxRate;
 }
 
-@DriftAccessor(tables: [CreditNotes, CreditNoteItems])
+@DriftAccessor(tables: [CreditNotes, CreditNoteItems, Products, Batches])
 class ReturnDao extends DatabaseAccessor<AppDatabase> with _$ReturnDaoMixin {
   ReturnDao(super.db);
 
@@ -523,20 +567,28 @@ class ReturnDao extends DatabaseAccessor<AppDatabase> with _$ReturnDaoMixin {
     required String actor,
   }) async {
     return transaction(() async {
-      final total = _round2(
+      final taxable = _round2(
+        items.fold<double>(
+          0,
+          (sum, item) => sum + (item.quantity * item.unitPrice),
+        ),
+      );
+      final gst = _round2(
         items.fold<double>(
           0,
           (sum, item) =>
-              sum +
-              ((item.quantity * item.unitPrice) * (1 + (item.taxRate / 100))),
+              sum + ((item.quantity * item.unitPrice) * (item.taxRate / 100)),
         ),
       );
+      final total = _round2(taxable + gst);
 
       final creditId = await into(creditNotes).insert(
         CreditNotesCompanion.insert(
           originalInvoiceNo: originalInvoiceNo,
           originalInvoiceDate: originalInvoiceDate,
           returnDate: returnDate,
+          taxableAmount: Value(taxable),
+          gstAmount: Value(gst),
           totalAmount: total,
         ),
       );
@@ -552,6 +604,34 @@ class ReturnDao extends DatabaseAccessor<AppDatabase> with _$ReturnDaoMixin {
             taxRate: item.taxRate,
           ),
         );
+
+        final matchedProduct = await (select(
+          products,
+        )..where((p) => p.name.equals(item.productName))).getSingleOrNull();
+        if (matchedProduct != null) {
+          final matchedBatch =
+              await (select(batches)..where(
+                    (b) =>
+                        b.productId.equals(matchedProduct.id) &
+                        b.batchNumber.equals(item.batchNumber),
+                  ))
+                  .getSingleOrNull();
+          if (matchedBatch != null) {
+            final nextQty = _round2(matchedBatch.quantity + item.quantity);
+            await (update(batches)..where((b) => b.id.equals(matchedBatch.id)))
+                .write(BatchesCompanion(quantity: Value(nextQty)));
+          } else {
+            await into(batches).insert(
+              BatchesCompanion.insert(
+                productId: matchedProduct.id,
+                batchNumber: item.batchNumber,
+                expDate: returnDate.add(const Duration(days: 365)),
+                quantity: item.quantity,
+                purchasePrice: item.unitPrice,
+              ),
+            );
+          }
+        }
       }
 
       await attachedDatabase.auditLogDao.addLog(

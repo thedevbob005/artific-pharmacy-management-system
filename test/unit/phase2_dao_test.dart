@@ -43,6 +43,22 @@ void main() {
   });
 
   test('return save creates credit note and items', () async {
+    await database.purchaseDao.savePurchaseInvoice(
+      supplierName: 'Om Pharma',
+      supplierGstin: '27AAACO1234B1Z5',
+      items: [
+        PurchaseItemInput(
+          productName: 'Paracetamol 500',
+          batchNumber: 'P500-B1',
+          quantity: 10,
+          purchasePrice: 8,
+          gstRate: 12,
+          expDate: DateTime(2027, 1, 1),
+        ),
+      ],
+      actor: 'admin',
+    );
+
     final creditId = await database.returnDao.createCreditNote(
       originalInvoiceNo: 'INV-2526-00001',
       originalInvoiceDate: DateTime(2026, 4, 10),
@@ -65,6 +81,11 @@ void main() {
     expect(creditId, greaterThan(0));
     expect(notes, hasLength(1));
     expect(items, hasLength(1));
+    expect(notes.single.taxableAmount, 20);
+    expect(notes.single.gstAmount, 2.4);
     expect(notes.single.totalAmount, 22.4);
+
+    final batches = await database.select(database.batches).get();
+    expect(batches.single.quantity, 12);
   });
 }

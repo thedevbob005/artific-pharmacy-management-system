@@ -44,6 +44,7 @@ class PurchasesState extends Equatable {
   const PurchasesState({
     required this.status,
     required this.lines,
+    required this.supplierSuggestions,
     required this.savedMessage,
     this.error,
   });
@@ -51,11 +52,13 @@ class PurchasesState extends Equatable {
   const PurchasesState.initial()
     : status = PurchasesStatus.initial,
       lines = const [],
+      supplierSuggestions = const [],
       savedMessage = null,
       error = null;
 
   final PurchasesStatus status;
   final List<PurchaseLine> lines;
+  final List<String> supplierSuggestions;
   final String? savedMessage;
   final String? error;
 
@@ -68,12 +71,14 @@ class PurchasesState extends Equatable {
   PurchasesState copyWith({
     PurchasesStatus? status,
     List<PurchaseLine>? lines,
+    List<String>? supplierSuggestions,
     String? savedMessage,
     String? error,
   }) {
     return PurchasesState(
       status: status ?? this.status,
       lines: lines ?? this.lines,
+      supplierSuggestions: supplierSuggestions ?? this.supplierSuggestions,
       savedMessage: savedMessage,
       error: error,
     );
@@ -82,7 +87,13 @@ class PurchasesState extends Equatable {
   static double _round2(double value) => (value * 100).round() / 100;
 
   @override
-  List<Object?> get props => [status, lines, savedMessage, error];
+  List<Object?> get props => [
+    status,
+    lines,
+    supplierSuggestions,
+    savedMessage,
+    error,
+  ];
 }
 
 sealed class PurchasesEvent extends Equatable {
@@ -137,6 +148,15 @@ class PurchaseInvoiceSaved extends PurchasesEvent {
   List<Object?> get props => [supplierName, supplierGstin];
 }
 
+class PurchaseSupplierQueryChanged extends PurchasesEvent {
+  const PurchaseSupplierQueryChanged(this.query);
+
+  final String query;
+
+  @override
+  List<Object?> get props => [query];
+}
+
 class PurchasesBloc extends Bloc<PurchasesEvent, PurchasesState> {
   PurchasesBloc({AppDatabase? database})
     : _database = database ?? getIt<AppDatabase>(),
@@ -144,9 +164,27 @@ class PurchasesBloc extends Bloc<PurchasesEvent, PurchasesState> {
     on<PurchasesStarted>(_onStarted);
     on<PurchaseLineAdded>(_onLineAdded);
     on<PurchaseInvoiceSaved>(_onSaved);
+    on<PurchaseSupplierQueryChanged>(_onSupplierQueryChanged);
   }
 
   final AppDatabase _database;
+
+  Future<void> _onSupplierQueryChanged(
+    PurchaseSupplierQueryChanged event,
+    Emitter<PurchasesState> emit,
+  ) async {
+    final suggestions = await _database.contactDao.supplierSuggestions(
+      event.query,
+    );
+    emit(
+      state.copyWith(
+        supplierSuggestions: suggestions,
+        status: PurchasesStatus.loaded,
+        error: state.error,
+        savedMessage: state.savedMessage,
+      ),
+    );
+  }
 
   void _onStarted(PurchasesStarted event, Emitter<PurchasesState> emit) {
     emit(

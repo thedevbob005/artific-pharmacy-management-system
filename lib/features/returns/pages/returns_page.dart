@@ -65,8 +65,22 @@ class _ReturnsPageState extends State<ReturnsPage> {
                     ),
                   _ReturnHeader(
                     invoiceController: _invoiceController,
+                    invoices: state.availableInvoices,
                     invoiceDate: _invoiceDate,
                     returnDate: _returnDate,
+                    selectedInvoiceId: state.selectedInvoiceId,
+                    onInvoiceSelected: (id) {
+                      context.read<ReturnsBloc>().add(
+                        ReturnOriginalInvoiceSelected(id),
+                      );
+                      final selected = state.availableInvoices
+                          .where((invoice) => invoice.id == id)
+                          .firstOrNull;
+                      if (selected != null) {
+                        _invoiceController.text = 'PINV-${selected.id}';
+                        _invoiceDate = selected.createdAt;
+                      }
+                    },
                     onInvoiceDateChanged: (d) =>
                         setState(() => _invoiceDate = d),
                     onReturnDateChanged: (d) => setState(() => _returnDate = d),
@@ -82,11 +96,29 @@ class _ReturnsPageState extends State<ReturnsPage> {
                   ),
                   const SizedBox(height: 12),
                   _ReturnLineForm(
+                    invoiceItems: state.availableInvoiceItems,
                     productController: _productController,
                     batchController: _batchController,
                     quantityController: _quantityController,
                     unitPriceController: _unitPriceController,
                     taxRateController: _taxRateController,
+                    onInvoiceItemPicked: (item) {
+                      _productController.text = item.productName;
+                      _batchController.text = item.batchNumber;
+                      _quantityController.text = '1';
+                      _unitPriceController.text = item.purchasePrice
+                          .toStringAsFixed(2);
+                      _taxRateController.text = item.gstRate.toStringAsFixed(2);
+                      context.read<ReturnsBloc>().add(
+                        ReturnInvoiceItemPicked(
+                          productName: item.productName,
+                          batchNumber: item.batchNumber,
+                          quantity: 1,
+                          unitPrice: item.purchasePrice,
+                          taxRate: item.gstRate,
+                        ),
+                      );
+                    },
                     onAdd: () {
                       context.read<ReturnsBloc>().add(
                         ReturnLineAdded(
@@ -121,16 +153,22 @@ class _ReturnsPageState extends State<ReturnsPage> {
 class _ReturnHeader extends StatelessWidget {
   const _ReturnHeader({
     required this.invoiceController,
+    required this.invoices,
+    required this.selectedInvoiceId,
     required this.invoiceDate,
     required this.returnDate,
+    required this.onInvoiceSelected,
     required this.onInvoiceDateChanged,
     required this.onReturnDateChanged,
     required this.onGenerate,
   });
 
   final TextEditingController invoiceController;
+  final List<ReturnInvoiceLookup> invoices;
+  final int? selectedInvoiceId;
   final DateTime invoiceDate;
   final DateTime returnDate;
+  final ValueChanged<int> onInvoiceSelected;
   final ValueChanged<DateTime> onInvoiceDateChanged;
   final ValueChanged<DateTime> onReturnDateChanged;
   final VoidCallback onGenerate;
@@ -149,6 +187,28 @@ class _ReturnHeader extends StatelessWidget {
               child: TextBox(
                 controller: invoiceController,
                 placeholder: 'Original invoice no.',
+              ),
+            ),
+            SizedBox(
+              width: 260,
+              child: ComboBox<int>(
+                value: selectedInvoiceId,
+                placeholder: const Text('Select original purchase invoice'),
+                items: invoices
+                    .map(
+                      (invoice) => ComboBoxItem<int>(
+                        value: invoice.id,
+                        child: Text(
+                          'PINV-${invoice.id} • ${invoice.supplierName}',
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (id) {
+                  if (id != null) {
+                    onInvoiceSelected(id);
+                  }
+                },
               ),
             ),
             DatePicker(
@@ -172,19 +232,23 @@ class _ReturnHeader extends StatelessWidget {
 
 class _ReturnLineForm extends StatelessWidget {
   const _ReturnLineForm({
+    required this.invoiceItems,
     required this.productController,
     required this.batchController,
     required this.quantityController,
     required this.unitPriceController,
     required this.taxRateController,
+    required this.onInvoiceItemPicked,
     required this.onAdd,
   });
 
+  final List<ReturnInvoiceItemLookup> invoiceItems;
   final TextEditingController productController;
   final TextEditingController batchController;
   final TextEditingController quantityController;
   final TextEditingController unitPriceController;
   final TextEditingController taxRateController;
+  final ValueChanged<ReturnInvoiceItemLookup> onInvoiceItemPicked;
   final VoidCallback onAdd;
 
   @override
@@ -196,6 +260,29 @@ class _ReturnLineForm extends StatelessWidget {
           spacing: 12,
           runSpacing: 12,
           children: [
+            if (invoiceItems.isNotEmpty)
+              SizedBox(
+                width: 360,
+                child: ComboBox<ReturnInvoiceItemLookup>(
+                  value: null,
+                  placeholder: const Text('Pick item from original invoice'),
+                  items: invoiceItems
+                      .map(
+                        (item) => ComboBoxItem<ReturnInvoiceItemLookup>(
+                          value: item,
+                          child: Text(
+                            '${item.productName} • Batch ${item.batchNumber}',
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (item) {
+                    if (item != null) {
+                      onInvoiceItemPicked(item);
+                    }
+                  },
+                ),
+              ),
             SizedBox(
               width: 220,
               child: TextBox(
