@@ -10,6 +10,7 @@ import '../../inventory/pages/inventory_page.dart';
 import '../../pos/pages/pos_page.dart';
 import '../../purchases/pages/purchases_page.dart';
 import '../../returns/pages/returns_page.dart';
+import '../../compliance/pages/compliance_page.dart';
 
 class AppShellPage extends StatelessWidget {
   const AppShellPage({super.key});
@@ -71,6 +72,15 @@ class AppShellPage extends StatelessWidget {
               icon: const Icon(FluentIcons.people),
               title: const Text('Customers'),
               body: const CustomersPage(),
+            ),
+          );
+        }
+        if (_canSee(access, 'H1 Register')) {
+          entries.add(
+            PaneItem(
+              icon: const Icon(FluentIcons.compliance_audit),
+              title: const Text('Compliance'),
+              body: const CompliancePage(),
             ),
           );
         }

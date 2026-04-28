@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:bcrypt/bcrypt.dart';
 import 'package:drift/drift.dart';
@@ -328,6 +329,20 @@ class AuditLogDao extends DatabaseAccessor<AppDatabase>
         payload: Value(payload),
       ),
     );
+  }
+
+  Future<List<AuditLog>> getLogsByEntity(String entity) {
+    return (select(auditLogs)
+          ..where((l) => l.entity.equals(entity))
+          ..orderBy([(l) => OrderingTerm.desc(l.createdAt)]))
+        .get();
+  }
+
+  Future<List<Map<String, dynamic>>> getPayloadsByEntity(String entity) async {
+    final logs = await getLogsByEntity(entity);
+    return logs
+        .map((log) => jsonDecode(log.payload) as Map<String, dynamic>)
+        .toList();
   }
 }
 
